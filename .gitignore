@@ -1,0 +1,10 @@
+node_modules/
+.env
+mosquitto/data/*
+!mosquitto/data/.gitkeep
+mosquitto/log/*
+!mosquitto/log/.gitkeep
+backups/*
+*.log
+.DS_Store
+Thumbs.db

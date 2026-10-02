@@ -1,0 +1,88 @@
+services:
+  # 1. Banco de Dados PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: mdm_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mdm_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SenhaSeguraMdm2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-mdm_frota_corporativa}
+    volumes:
+      - dados_postgres:/var/lib/postgresql/data
+      - ./backend/src/banco/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rede_mdm_corporativa
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mdm_admin -d mdm_frota_corporativa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Broker MQTT Mosquitto com suporte a TLS/MQTTS
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mdm_mosquitto_prod
+    restart: unless-stopped
+    ports:
+      - "1883:1883" # MQTT Interno
+      - "8883:8883" # MQTTS Seguro para os 250 Tablets
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+      - ./mosquitto/certificados:/mosquitto/certificados:ro
+    networks:
+      - rede_mdm_corporativa
+
+  # 3. Servidor de API Backend (Fastify + TypeScript)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mdm_backend_prod
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORTA_API: 3000
+      HOST_API: "0.0.0.0"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-mdm_admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-SenhaSeguraMdm2026!}
+      DB_DATABASE: ${POSTGRES_DB:-mdm_frota_corporativa}
+      MQTT_BROKER_URL: "mqtt://mosquitto:1883"
+      DOMINIO_CORPORATIVO: ${DOMINIO_CORPORATIVO:-mdm-corporativo.duckdns.org}
+    volumes:
+      - ./apk:/app/public/apk
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    networks:
+      - rede_mdm_corporativa
+
+  # 4. Frontend Web Nginx (Painel de Gestão e Proxy Reverso)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mdm_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - rede_mdm_corporativa
+
+networks:
+  rede_mdm_corporativa:
+    driver: bridge
+
+volumes:
+  dados_postgres:
+    driver: local
