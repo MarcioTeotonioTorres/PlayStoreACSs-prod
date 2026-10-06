@@ -32,7 +32,7 @@ chmod +x scripts/*.sh
 
 | Porta | Protocolo | Serviço | Descrição |
 | :---: | :---: | :---: | :--- |
-| **80** | HTTP | Frontend Nginx | Painel Web de Gestão dos Operadores |
+| **8090** (ou 80) | HTTP | Frontend Nginx | Painel Web dos Operadores e Proxy Reverso (/api, /apk) |
 | **3000** | HTTP | Backend Fastify | API REST e Catálogo de APKs |
 | **8883** | MQTTS (TLS) | Mosquitto | Canal Criptografado com os 250 Tablets |
 | **1883** | MQTT | Mosquitto (Interno) | Barramento interno de mensageria |

@@ -20,6 +20,6 @@ echo "Subindo containers Docker..."
 docker compose up -d --build
 
 echo "=== Deploy concluído com sucesso! ==="
-echo "Painel Web: http://$(hostname -I | awk '{print $1}') ou seu domínio DuckDNS"
+echo "Painel Web: http://$(hostname -I | awk '{print $1}'):8090 (ou seu domínio DuckDNS)"
 echo "API Backend: http://$(hostname -I | awk '{print $1}'):3000"
 echo "Broker MQTTS: Porta 8883"

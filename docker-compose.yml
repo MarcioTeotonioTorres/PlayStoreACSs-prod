@@ -54,7 +54,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-SenhaSeguraMdm2026!}
       DB_DATABASE: ${POSTGRES_DB:-mdm_frota_corporativa}
       MQTT_BROKER_URL: "mqtt://mosquitto:1883"
-      DOMINIO_CORPORATIVO: ${DOMINIO_CORPORATIVO:-mdm-corporativo.duckdns.org}
+      # Em teste: usa o IP direto. Em produção, defina DOMINIO_DUCKDNS no .env da VPS
+      DOMINIO_DUCKDNS: ${DOMINIO_DUCKDNS:-31.97.86.253:8090}
     volumes:
       - ./apk:/app/public/apk
     depends_on:
