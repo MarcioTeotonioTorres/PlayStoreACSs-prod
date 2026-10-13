@@ -8,6 +8,7 @@ export interface MetricasFrotaResposta {
     bateria_critica: number;
     sinal_wifi_fraco: number;
     em_uso_ativo: number;
+    ociosos_criticos?: number;
   };
   atualizado_em: string;
 }
@@ -164,6 +165,8 @@ export interface DadosPolitica {
   permitir_camera: boolean;
   bloquear_usb: boolean;
   permitir_reset_fabrica: boolean;
+  bloquear_instalacao_apps?: boolean;
+  bloquear_bluetooth?: boolean;
   modo_quiosque_app?: string;
   habilitar_modo_quiosque: boolean;
   pacotes_ocultos: string[];

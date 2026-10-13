@@ -120,9 +120,11 @@ function processar_consulta_simulada_memoria<T extends QueryResultRow>(
 
   // 1. Resumo da Frota
   if (sqlLimpo.includes('COUNT(*)::INT AS TOTAL_DISPOSITIVOS')) {
-    const conectados = dispositivosMemoria.filter((d) => d.status_conexao === 'conectado').length;
+    const agora = Date.now();
+    const conectados = dispositivosMemoria.filter((d) => (agora - new Date(d.ultimo_contato).getTime()) <= 180000).length;
     const bateriaCritica = dispositivosMemoria.filter((d) => d.bateria <= 20).length;
     const sinalFraco = dispositivosMemoria.filter((d) => d.sinal_wifi_rssi < -75).length;
+    const ociososCriticos = dispositivosMemoria.filter((d) => (agora - new Date(d.ultimo_contato).getTime()) >= 86400000 || (d.tempo_ocioso_minutos || 0) >= 1440).length;
 
     const row = {
       total_dispositivos: 250,
@@ -131,6 +133,7 @@ function processar_consulta_simulada_memoria<T extends QueryResultRow>(
       bateria_critica: bateriaCritica * 3,
       sinal_wifi_fraco: sinalFraco * 2,
       em_uso_ativo: 210,
+      ociosos_criticos: ociososCriticos * 3,
     };
 
     return {
@@ -144,7 +147,17 @@ function processar_consulta_simulada_memoria<T extends QueryResultRow>(
 
   // 2. Listagem de Dispositivos
   if (sqlLimpo.startsWith('SELECT') && sqlLimpo.includes('FROM DISPOSITIVOS')) {
-    let filtrados = [...dispositivosMemoria];
+    const agora = Date.now();
+    let filtrados = dispositivosMemoria.map((d) => {
+      const msSemContato = agora - new Date(d.ultimo_contato).getTime();
+      const isOnline = msSemContato <= 180000;
+      const minsSemContato = Math.max(0, Math.floor(msSemContato / 60000));
+      return {
+        ...d,
+        status_conexao: isOnline ? 'conectado' : 'desconectado',
+        tempo_ocioso_minutos: isOnline ? (d.tempo_ocioso_minutos || 0) : (d.tempo_ocioso_minutos || 0) + minsSemContato,
+      };
+    });
 
     if (parametros.length > 0) {
       const statusParam = parametros.find((p) => p === 'conectado' || p === 'desconectado');
@@ -214,7 +227,9 @@ export function inicializar_pool_conexoes(): Pool {
     });
 
     // Migração automática para garantir colunas novas sem precisar de script manual
-    pool.query(`ALTER TABLE dispositivos ADD COLUMN tempo_ocioso_minutos INT DEFAULT 0;`).catch(() => {});
+    pool.query(`ALTER TABLE dispositivos ADD COLUMN IF NOT EXISTS tempo_ocioso_minutos INT DEFAULT 0;`).catch(() => {});
+    pool.query(`ALTER TABLE politicas ADD COLUMN IF NOT EXISTS bloquear_instalacao_apps BOOLEAN NOT NULL DEFAULT TRUE;`).catch(() => {});
+    pool.query(`ALTER TABLE politicas ADD COLUMN IF NOT EXISTS bloquear_bluetooth BOOLEAN NOT NULL DEFAULT FALSE;`).catch(() => {});
   }
   return pool;
 }
